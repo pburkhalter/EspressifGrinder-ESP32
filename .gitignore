@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Byte-compiled micropython files
+*.mpy
+
+# Distribution / packaging
+.Python
+build/
+
+# Config file
+config.json
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IntelliJ Idea files
+.idea/
+
+# DS Store files (macos)
+._DS_Store
