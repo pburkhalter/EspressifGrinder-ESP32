@@ -1,18 +1,27 @@
 import time
 import uasyncio
-from config import conf, pinD1, pinD5
+import math
+from config import conf, pinGRN, pinSMO
+from led import statusLED
 
 
 async def grind(duration):
     try:
         print("Grinding started...")
-        pinD1.on()
+        pinGRN.on()
+        statusLED.on()
         await uasyncio.sleep_ms(duration)
-        pinD1.off()
+        pinGRN.off()
+        statusLED.off()
         print("Grinding completed...")
     except uasyncio.CancelledError:
-        pinD1.off()
+        pinGRN.off()
+        statusLED.blink(250, conf.data['grinder']['memorize_timeout'])
         print("Grinding cancelled...")
+
+
+async def grind_complete(start, stop):
+    pass
 
 
 class GrinderController(object):
@@ -24,7 +33,7 @@ class GrinderController(object):
         self.__stopped = None     # Time Grind stopped (ticks)
         self.__task = None        # Async grinding task
 
-        if pinD5.value() == 0:
+        if pinSMO.value() == 0:
             self.set_mode("single")
         else:
             self.set_mode("double")
@@ -82,7 +91,7 @@ class GrinderController(object):
             
         if diff_elapsed_grind >= self.__duration:
             self.reset()
-        
+
         try:     
             self.__task.cancel()
         except AttributeError:

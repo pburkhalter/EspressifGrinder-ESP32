@@ -2,9 +2,9 @@ import network
 import esp
 import gc
 import time
-from config import conf
 import ubinascii
-
+from config import conf
+from led import statusLED
 
 
 # Disable debugging
@@ -40,6 +40,9 @@ def setup():
             print('Starting WebREPL...')
             import webrepl
             webrepl.start()
+
+    statusLED.blink(100, 1000)
+
 
 def welcome():
     time.sleep(2)

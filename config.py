@@ -10,10 +10,11 @@ CONFIG_VERSION = "0.0.1"
 
 
 # Pin mapping
-pinD1 = Pin(5,  Pin.OUT, value=0)      # Grinder
-pinD5 = Pin(14, Pin.IN, Pin.PULL_UP)   # Single Mode
-pinD6 = Pin(12, Pin.IN, Pin.PULL_UP)   # Double Mode
-pinD7 = Pin(13, Pin.IN, Pin.PULL_UP)   # Microswitch
+pinSMO = Pin(33, Pin.IN, Pin.PULL_UP)   # Single Mode
+pinDMO = Pin(32, Pin.IN, Pin.PULL_UP)   # Double Mode
+pinGRN = Pin(25, Pin.OUT, Pin.PULL_UP)    # Grinder
+pinLED = Pin(26, Pin.OUT, Pin.PULL_UP)    # LED
+pinMSW = Pin(27, Pin.IN, Pin.PULL_UP)   # Microswitch
 
 
 async def autosave(timeout):
@@ -48,7 +49,7 @@ class Config(object):
         self.defaults['network']['enabled'] = False
         self.defaults['network']['ssid'] = ''
         self.defaults['network']['password'] = ''
-        self.defaults['network']['hostname'] = 'coffegrinder.local'
+        self.defaults['network']['hostname'] = 'coffegrinder'
 
         self.defaults['network']['enable_restapi'] = False
         self.defaults['network']['host'] = '0.0.0.0'

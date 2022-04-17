@@ -9,7 +9,7 @@ import micropython
 import math
 import ubinascii
 
-from config import conf, pinD5, pinD6, pinD7, autosave
+from config import conf, pinSMO, pinDMO, pinMSW, autosave
 from picoweb import WebApp, jsonify, start_response
 from aswitch.aswitch import Switch
 from aswitch.abutton import Pushbutton
@@ -98,6 +98,7 @@ def index(request, response):
     headers = {"Location": "/"}
     yield from start_response(response, status="303", headers=headers)
 
+
 @webapp.route('/config', method='GET')
 def grind(request, response):
     """
@@ -108,6 +109,7 @@ def grind(request, response):
 
     yield from start_response(response, content_type="application/octet-stream")
     yield from jsonify(response, nconfig)
+
 
 @webapp.route('/settings/mode', method='GET')
 def get_settings_mode(request, response):
@@ -198,21 +200,21 @@ def reset_stats(request, response):
     conf.reset()
     yield from jsonify(response, conf.data)
 
+
 @webapp.route('/machine/reset', method='GET')
 def reset_machine(request, response):
     """
     Reset the machine
     """
-    import machine
     machine.reset()
 
 
 async def main():
     print("Starting...")
 
-    ps = Switch(pinD5)
-    pd = Switch(pinD6)
-    pg = Pushbutton(pinD7)
+    ps = Switch(pinSMO)
+    pd = Switch(pinDMO)
+    pg = Pushbutton(pinMSW)
     
     ps.close_func(switch_single)
     pd.close_func(switch_double)
@@ -228,7 +230,7 @@ async def main():
         loop.create_task(webapp.run(
             conf.data['network']['host'],
             conf.data['network']['port'],
-            debug=True)
+            debug=False)
         )
 
     gc.collect()
