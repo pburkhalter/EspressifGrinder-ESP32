@@ -1,1 +1,1 @@
-# EspressifGrinder-ESP8266
+# EspressifGrinder-ESP32
