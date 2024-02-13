@@ -1,49 +1,67 @@
-import uasyncio
+import gc
+import os
+import esp
 import network
 import machine
-import gc
-import esp
-import os
-import utime
-import micropython
 import math
 import ubinascii
+import utime
+import uasyncio
+
+from lib.picoweb import WebApp, start_response
+from lib.aswitch import Switch
+from lib.aswitch import Pushbutton
 
 from config import conf, pinSMO, pinDMO, pinMSW, autosave
-from picoweb import WebApp, jsonify, start_response
-from aswitch.aswitch import Switch
-from aswitch.abutton import Pushbutton
 from grinder import GrinderController
 
+import routes.api as api_routes
 
-# Pico web server
+
+# Initialize the WebApp
 webapp = WebApp(__name__)
-
-# Preload templates to avoid memory fragmentation issues
-webapp._load_template('index.tpl')
+webapp._load_template('index.tpl')  # Preload templates to avoid memory issues
 gc.collect()
 
-# Coffee Grinder Controller
+# Initialize the Grinder Controller
 grinder = GrinderController()
 
 
-def switch_single():
-    grinder.set_mode("single")
+def setup_switches():
+    # Setup hardware switches and pushbutton with their functionalities
+    smo_switch = Switch(pinSMO)
+    smo_switch.close_func(lambda: grinder.set_mode("single"))
+
+    dmo_switch = Switch(pinDMO)
+    dmo_switch.close_func(lambda: grinder.set_mode("double"))
+
+    msw_button = Pushbutton(pinMSW)
+    msw_button.press_func(grinder.start_grinding)
+    msw_button.release_func(grinder.stop_grinding)
 
 
-def switch_double():
-    grinder.set_mode("double")
+def register_routes():
+    # Register all routes for the web application
+    routes = [
+        ('/api/update',                     api_routes.update,                  'GET'),
+        ('/api/config',                     api_routes.get_config,              'GET'),
+        ('/api/grinder/mode',               api_routes.get_settings_mode,       'GET'),
+        ('/api/grinder/single/duration',    api_routes.get_single_duration,     'GET'),
+        ('/api/grinder/single/duration',    api_routes.set_single_duration,     'POST'),
+        ('/api/grinder/double/duration',    api_routes.get_double_duration,     'GET'),
+        ('/api/grinder/double/duration',    api_routes.set_double_duration,     'POST'),
+        ('/api/grinder/memorize/timeout',   api_routes.get_memorize_timeout,    'GET'),
+        ('/api/grinder/memorize/timeout',   api_routes.set_memorize_timeout,    'POST'),
+        ('/api/stats/grinds/single',        api_routes.get_stats_grinds_single, 'GET'),
+        ('/api/stats/grinds/double',        api_routes.get_stats_grinds_double, 'GET'),
+        ('/api/stats/reset',                api_routes.reset_stats,             'GET'),
+        ('/api/machine/reset',              api_routes.reset_machine,           'GET'),
+    ]
+
+    for path, handler, method in routes:
+        webapp.route(path, method=method)(handler)
 
 
-def button_grind_press():
-    grinder.start()
-
-
-def button_grind_release():
-    grinder.stop()
-
-
-# Routes
 @webapp.route('/', method='GET')
 def index(request, response):
     sta_if = network.WLAN(network.STA_IF)
@@ -58,14 +76,13 @@ def index(request, response):
         "device_uptime": math.floor(utime.ticks_ms() / 1000000000),
         "device_cpufreq": machine.freq() / 1000000,
         "network_connected": sta_if.isconnected(),
-        "network_ssid": sta_if.config('essid'),
-        "network_rssi": sta_if.status('rssi'),
-        "network_hostname": sta_if.config('dhcp_hostname'),
+        "network_ssid": sta_if.config('ssid'),
+        "network_hostname": network.hostname,
         "network_ip": network_config[0],
         "network_subnet": network_config[1],
         "network_gateway": network_config[2],
         "network_dns": network_config[3],
-        "network_mac": ubinascii.hexlify(network.WLAN().config('mac'),':').decode(),
+        "network_mac": ubinascii.hexlify(network.WLAN().config('mac'), ':').decode(),
         "grind_autosave": conf.data['general']['autosave_timeout'],
         "grind_single_duration": conf.data['grinder']['single'],
         "grind_double_duration": conf.data['grinder']['double'],
@@ -78,163 +95,35 @@ def index(request, response):
     yield from start_response(response, content_type="text/html")
     yield from webapp.render_template(response, 'index.tpl', (infos,))
 
-@webapp.route("/update")
-def index(request, response):
-    if request.method == "POST":
-        yield from request.read_form_data()
-    else:  # GET, apparently
-        # Note: parse_qs() is not a coroutine, but a normal function.
-        # But you can call it using yield from too.
-        request.parse_qs()
-
-    # Whether form data comes from GET or POST request, once parsed,
-    # it's available as req.form dictionary
-    conf.data['grinder']['single'] = int(request.form["single"])
-    conf.data['grinder']['double'] = int(request.form["double"])
-    conf.data['grinder']['memorize_timeout'] = int(request.form["timeout"])
-    conf.write()
-
-    # redirect to "/"
-    headers = {"Location": "/"}
-    yield from start_response(response, status="303", headers=headers)
-
-
-@webapp.route('/config', method='GET')
-def grind(request, response):
-    """
-    Get the config
-    """
-    nconfig = conf.data
-    nconfig['network']['password'] = '**************************'
-
-    yield from start_response(response, content_type="application/octet-stream")
-    yield from jsonify(response, nconfig)
-
-
-@webapp.route('/settings/mode', method='GET')
-def get_settings_mode(request, response):
-    """
-    Get the actual mode (single or double)
-    """
-    yield from jsonify(response, conf.data)
-
-
-@webapp.route('/settings/single/duration', method='GET')
-def get_single_duration(request, response):
-    """
-    Get the duration of a single shot
-    """
-    yield from jsonify(response, conf.data)
-
-
-@webapp.route('/settings/single/duration', method='POST')
-def set_single_duration(request, response):
-    """
-    Set the duration of a single shot
-    """
-    yield from request.read_form_data()
-    conf.data['grinder']['single'] = request.form.get('duration')
-    gc.collect()
-    yield from jsonify(response, conf.data)
-
-
-@webapp.route('/settings/double/duration', method='GET')
-def get_double_duration(request, response):
-    """
-    Get the duration of a double shot
-    """
-    yield from jsonify(response, conf.data)
-
-
-@webapp.route('/settings/double/duration', method='POST')
-def set_double_duration(request, response):
-    """
-    Set the duration of a single shot
-    """
-    yield from request.read_form_data()
-    conf.data['grinder']['double'] = request.form.get('duration')
-    gc.collect()
-    yield from jsonify(response, conf.data)
-
-
-@webapp.route('/settings/memorize/timeout', method='GET')
-def get_memorize_timeout(request, response):
-    """
-    Get how long a started grind will be memorized
-    """
-    yield from jsonify(response, conf.data)
-
-
-@webapp.route('/settings/memorize/timeout', method='POST')
-def set_memorize_timeout(request, response):
-    """
-    Set how long a started grind will be memorized
-    """
-    yield from request.read_form_data()
-    conf.data['grinder']['memorize_timeout'] = request.form.get('memorize_timeout')
-    gc.collect()
-    yield from jsonify(response, conf.data)
-
-
-@webapp.route('/stats/grinds/single', method='GET')
-def get_stats_grinds_single(request, response):
-    """
-    Get the total amount of single shots grinded
-    """
-    yield from jsonify(response, conf.data)
-
-
-@webapp.route('/stats/grinds/double', method='GET')
-def get_stats_grinds_double(request, response):
-    """
-    Get the total amount of single shots grinded
-    """
-    yield from jsonify(response, conf.data)
-
-
-@webapp.route('/stats/reset', method='GET')
-def reset_stats(request, response):
-    """
-    Reset the statistics
-    """
-    conf.reset()
-    yield from jsonify(response, conf.data)
-
-
-@webapp.route('/machine/reset', method='GET')
-def reset_machine(request, response):
-    """
-    Reset the machine
-    """
-    machine.reset()
-
 
 async def main():
-    print("Starting...")
+    print("Starting application...")
 
-    ps = Switch(pinSMO)
-    pd = Switch(pinDMO)
-    pg = Pushbutton(pinMSW)
-    
-    ps.close_func(switch_single)
-    pd.close_func(switch_double)
-    pg.press_func(button_grind_press)
-    pg.release_func(button_grind_release)
-    
-    loop = uasyncio.get_event_loop()
+    # Setup hardware controls
+    setup_switches()
 
-    if conf.data['general']['autosave_timeout'] > 0:
-        loop.create_task(autosave(conf.data['general']['autosave_timeout']))
+    # Register web routes
+    register_routes()
 
-    if conf.data['network']['enable_restapi'] is True:
-        loop.create_task(webapp.run(
-            conf.data['network']['host'],
-            conf.data['network']['port'],
-            debug=False)
-        )
+    # Setup autosave if configured
+    if conf.data.get('general', {}).get('autosave_timeout', 0) > 0:
+        uasyncio.create_task(autosave(conf.data['general']['autosave_timeout']))
 
+    # Start the web server if REST API is enabled
+    if conf.data.get('network', {}).get('enable_restapi', True):
+        host = conf.data['network'].get('host', '0.0.0.0')
+        port = conf.data['network'].get('port', 80)
+        debug = conf.data['network'].get('debug', False)
+        uasyncio.create_task(webapp.run(host, port, debug=debug))
+
+    # Collect garbage to free up unused memory
     gc.collect()
-    loop.run_forever()
+
+    # Keep the server running
+    while True:
+        await uasyncio.sleep(1)
 
 
-uasyncio.run(main())
+# Run the application
+if __name__ == "__main__":
+    uasyncio.run(main())

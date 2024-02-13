@@ -4,7 +4,7 @@ import gc
 import time
 import ubinascii
 from config import conf
-from led import statusLED
+from led import LEDController
 
 
 # Disable debugging
@@ -23,6 +23,7 @@ def setup():
         
         if not sta_if.isconnected():
             sta_if.active(True)
+            sta_if.config(pm=sta_if.PM_NONE)  # disable power management
 
             sta_if.connect(
                 conf.data['network']['ssid'],
@@ -41,7 +42,8 @@ def setup():
             import webrepl
             webrepl.start()
 
-    statusLED.blink(100, 1000)
+    led_controller = LEDController()
+    led_controller.blink(100, 1000)
 
 
 def welcome():
@@ -65,9 +67,8 @@ def welcome():
     network_config = sta_if.ifconfig()
     print(' ')
     print('Network:')
-    print('SSID:', sta_if.config('essid'))
-    print('RSSI:', sta_if.status('rssi'))
-    print('Hostname:', sta_if.config('dhcp_hostname'))
+    print('SSID:', sta_if.config('ssid'))
+    print('Hostname:', network.hostname)
     print('IP:', network_config[0])
     print('Subnet:', network_config[1])
     print('Gateway:', network_config[2])

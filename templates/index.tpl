@@ -174,7 +174,7 @@ body {
 <div class='about'>
     <nav>Connected to Network<span>{{ infos['network_connected'] }}</span></nav>
     <nav>SSID<span>{{ infos['network_ssid'] }}</span></nav>
-    <nav>RSSI<span>{{ infos['network_rssi'] }} dB</span></nav>
+    <nav>RSSI<span>nA dB</span></nav>
     <nav>Hostname<span>{{ infos['network_hostname'] }}</span></nav>
     <nav>IP<span>{{ infos['network_ip'] }}</span></nav>
     <nav>Subnet<span>{{ infos['network_subnet'] }}</span></nav>

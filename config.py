@@ -8,13 +8,12 @@ import uasyncio
 VERSION = "0.0.1"
 CONFIG_VERSION = "0.0.1"
 
-
 # Pin mapping
-pinSMO = Pin(33, Pin.IN, Pin.PULL_UP)   # Single Mode
-pinDMO = Pin(32, Pin.IN, Pin.PULL_UP)   # Double Mode
-pinGRN = Pin(25, Pin.OUT, Pin.PULL_UP)    # Grinder
-pinLED = Pin(26, Pin.OUT, Pin.PULL_UP)    # LED
-pinMSW = Pin(27, Pin.IN, Pin.PULL_UP)   # Microswitch
+pinSMO = Pin(33, Pin.IN, Pin.PULL_UP)  # Single Mode
+pinDMO = Pin(32, Pin.IN, Pin.PULL_UP)  # Double Mode
+pinGRN = Pin(25, Pin.OUT, Pin.PULL_UP) # Grinder
+pinLED = Pin(26, Pin.OUT, Pin.PULL_UP) # LED
+pinMSW = Pin(27, Pin.IN, Pin.PULL_UP)  # Microswitch
 
 
 async def autosave(timeout):
@@ -30,6 +29,7 @@ def singleton(cls):
         if cls not in instances:
             instances[cls] = cls()
         return instances[cls]
+
     return getinstance
 
 
@@ -38,32 +38,33 @@ class Config(object):
 
     def __init__(self):
         self.data = {}
-        self.defaults = {}
-
-        self.defaults['general'] = {}
-        self.defaults['general']['config_version'] = CONFIG_VERSION
-        self.defaults['general']['enable_webrepl'] = True
-        self.defaults['general']['autosave_timeout'] = 600  # in seconds
-
-        self.defaults['network'] = {}
-        self.defaults['network']['enabled'] = False
-        self.defaults['network']['ssid'] = ''
-        self.defaults['network']['password'] = ''
-        self.defaults['network']['hostname'] = 'coffegrinder'
-
-        self.defaults['network']['enable_restapi'] = False
-        self.defaults['network']['host'] = '0.0.0.0'
-        self.defaults['network']['port'] = 80
-        
-        self.defaults['grinder'] = {}
-        self.defaults['grinder']['single'] = 4000
-        self.defaults['grinder']['double'] = 8000
-        self.defaults['grinder']['memorize_timeout'] = 5000
-        
-        self.defaults['stats'] = {}
-        self.defaults['stats']['duration'] = 0
-        self.defaults['stats']['single'] = 0
-        self.defaults['stats']['double'] = 0
+        self.defaults = {
+            'general': {
+                'description': 'Macap M2D',
+                'config_version': CONFIG_VERSION,
+                'enable_webrepl': True,
+                'autosave_timeout': 600,  # in seconds
+            },
+            'network': {
+                'enabled': True,
+                'ssid': '',
+                'password': '',
+                'hostname': 'coffegrinder',
+                'enable_restapi': True,
+                'host': '0.0.0.0',
+                'port': 80,
+            },
+            'grinder': {
+                'single': 4000,
+                'double': 8000,
+                'memorize_timeout': 5000,
+            },
+            'stats': {
+                'duration': 0,
+                'single': 0,
+                'double': 0,
+            }
+        }
 
         if not self.read():
             print("No config file found. Creating...")
@@ -84,7 +85,7 @@ class Config(object):
 
             if apply:
                 self.data = data
-                
+
         except OSError:
             print("Could not read config file! Setting default values...")
             self.data = self.defaults
