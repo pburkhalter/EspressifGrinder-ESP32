@@ -155,14 +155,14 @@ body {
 <div class=title>Settings</div>
 <div class=setup>
     <nav class=clickable onclick=window.location.href='/machine/reset'>Reboot the device</nav>
-    <nav class=clickable onclick=window.location.href='/stats/reset'>Reset Device Statistics</nav>
+    <nav class=clickable onclick=window.location.href='/stats/reset'>Reset DeviceInfo Statistics</nav>
     <nav class=clickable onclick=window.location.href='/config'>Download Config (Backup)</nav>
 </div>
 <div class=notice>Note: For security reasons the password will be excluded when downloading the config file.
 </div>
-<div class='title'>Device</div>
+<div class='title'>DeviceInfo</div>
 <div class='about'>
-    <nav>Device model<span>{{ infos['device_model'] }}</span></nav>
+    <nav>DeviceInfo model<span>{{ infos['device_model'] }}</span></nav>
     <nav>Firmware version<span>{{ infos['device_firmware'] }}</span></nav>
     <nav>Free memory<span>{{ infos['device_freemem'] }} kB</span></nav>
     <nav>Flash size<span>{{ infos['device_totalspace'] }} MB</span></nav>
@@ -170,9 +170,9 @@ body {
     <nav>Uptime<span>{{ infos['device_uptime'] }} h</span></nav>
 </div>
 
-<div class='title'>Network</div>
+<div class='title'>NetworkManager</div>
 <div class='about'>
-    <nav>Connected to Network<span>{{ infos['network_connected'] }}</span></nav>
+    <nav>Connected to NetworkManager<span>{{ infos['network_connected'] }}</span></nav>
     <nav>SSID<span>{{ infos['network_ssid'] }}</span></nav>
     <nav>RSSI<span>nA dB</span></nav>
     <nav>Hostname<span>{{ infos['network_hostname'] }}</span></nav>

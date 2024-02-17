@@ -1,5 +1,5 @@
-import jwt
-from microdot.microdot import invoke_handler
+from lib import jwt
+from .microdot import invoke_handler
 
 secret_key = None
 

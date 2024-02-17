@@ -1,3 +1,6 @@
+# Author: Paul Sokolovsky
+# Copyright Paul Sokolovsky released under the MIT license
+
 class Loader:
 
     def __init__(self, pkg, dir):

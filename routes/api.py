@@ -1,123 +1,66 @@
-import machine
-import gc
+import json
 
-from config import conf, pinSMO, pinDMO, pinMSW, autosave
-from lib.picoweb import jsonify, start_response
+from config import conf
 
 
-def update(request, response):
-    if request.method == "POST":
-        yield from request.read_form_data()
-    else:  # GET, apparently
-        # Note: parse_qs() is not a coroutine, but a normal function.
-        # But you can call it using yield from too.
-        request.parse_qs()
+def get_config(request):
+    c = conf.data
+    c['wifi']['password'] = 10 * '*'
 
-    # Whether form data comes from GET or POST request, once parsed,
-    # it's available as req.form dictionary
-    conf.data['grinder']['single'] = int(request.form["single"])
-    conf.data['grinder']['double'] = int(request.form["double"])
-    conf.data['grinder']['memorize_timeout'] = int(request.form["timeout"])
-    conf.write()
-
-    # redirect to "/"
-    headers = {"Location": "/"}
-    yield from start_response(response, status="303", headers=headers)
+    return json.dumps(c), 200, {'Content-Type': 'application/json'}
 
 
-def get_config(request, response):
-    """
-    Get the config
-    """
-    nconfig = conf.data
-    nconfig['network']['password'] = '**************************'
-
-    yield from start_response(response, content_type="application/octet-stream")
-    yield from jsonify(response, nconfig)
+def get_reset(request):
+    pass
 
 
-def get_settings_mode(request, response):
-    """
-    Get the actual mode (single or double)
-    """
-    yield from jsonify(response, conf.data)
+def get_device(request):
+    pass
 
 
-def get_single_duration(request, response):
-    """
-    Get the duration of a single shot
-    """
-    yield from jsonify(response, conf.data)
+def update(request):
+    pass
 
 
-def set_single_duration(request, response):
-    """
-    Set the duration of a single shot
-    """
-    yield from request.read_form_data()
-    conf.data['grinder']['single'] = request.form.get('duration')
-    gc.collect()
-    yield from jsonify(response, conf.data)
+def get_settings_mode(request):
+    pass
 
 
-def get_double_duration(request, response):
-    """
-    Get the duration of a double shot
-    """
-    yield from jsonify(response, conf.data)
+def get_single_duration(request):
+    pass
 
 
-def set_double_duration(request, response):
-    """
-    Set the duration of a single shot
-    """
-    yield from request.read_form_data()
-    conf.data['grinder']['double'] = request.form.get('duration')
-    gc.collect()
-    yield from jsonify(response, conf.data)
+def set_single_duration(request):
+    pass
 
 
-def get_memorize_timeout(request, response):
-    """
-    Get how long a started grind will be memorized
-    """
-    yield from jsonify(response, conf.data)
+def get_double_duration(request):
+    pass
 
 
-def set_memorize_timeout(request, response):
-    """
-    Set how long a started grind will be memorized
-    """
-    yield from request.read_form_data()
-    conf.data['grinder']['memorize_timeout'] = request.form.get('memorize_timeout')
-    gc.collect()
-    yield from jsonify(response, conf.data)
+def set_double_duration(request):
+    pass
 
 
-def get_stats_grinds_single(request, response):
-    """
-    Get the total amount of single shots grinded
-    """
-    yield from jsonify(response, conf.data)
+def get_memorize_timeout(request):
+    pass
 
 
-def get_stats_grinds_double(request, response):
-    """
-    Get the total amount of single shots grinded
-    """
-    yield from jsonify(response, conf.data)
+def set_memorize_timeout(request):
+    pass
 
 
-def reset_stats(request, response):
-    """
-    Reset the statistics
-    """
-    conf.reset()
-    yield from jsonify(response, conf.data)
+def get_stats_grinds_single(request):
+    pass
 
 
-def reset_machine(request, response):
-    """
-    Reset the machine
-    """
-    machine.reset()
+def get_stats_grinds_double(request):
+    pass
+
+
+def reset_stats(request):
+    pass
+
+
+def reset_machine(request):
+    pass

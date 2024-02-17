@@ -1,128 +1,175 @@
-from machine import Pin
-import json
+import binascii
+import hashlib
 import os
-import uasyncio
+import json
+from machine import Pin
 
+from lib.secret import generate_random_string
+from lib.singleton import singleton
 
-# Version
-VERSION = "0.0.1"
-CONFIG_VERSION = "0.0.1"
 
 # Pin mapping
-pinSMO = Pin(33, Pin.IN, Pin.PULL_UP)  # Single Mode
-pinDMO = Pin(32, Pin.IN, Pin.PULL_UP)  # Double Mode
-pinGRN = Pin(25, Pin.OUT, Pin.PULL_UP) # Grinder
-pinLED = Pin(26, Pin.OUT, Pin.PULL_UP) # LED
-pinMSW = Pin(27, Pin.IN, Pin.PULL_UP)  # Microswitch
+pinSMO = Pin(33, Pin.IN, Pin.PULL_UP)   # Single Mode
+pinDMO = Pin(32, Pin.IN, Pin.PULL_UP)   # Double Mode
+pinGRN = Pin(25, Pin.OUT, Pin.PULL_UP)  # Grinder
+pinLED = Pin(26, Pin.OUT, Pin.PULL_UP)  # LED
+pinMSW = Pin(27, Pin.IN, Pin.PULL_UP)   # Microswitch
 
 
-async def autosave(timeout):
-    while True:
-        await uasyncio.sleep(timeout)
-        conf.write()
+WIFI_PATH = './secrets/tokens.json'
+TOKENS_PATH = './secrets/tokens.json'
+CONFIG_PATH = 'configs/configs.json'
+CONFIG_DEFAULT_PATH = 'configs/config.default.json'
 
 
-def singleton(cls):
-    instances = {}
+def exists(path):
+    try:
+        directory, filename = path.rsplit('/', 1)
+    except ValueError:
+        # No '/' in path, implying current directory
+        directory, filename = '.', path
 
-    def getinstance():
-        if cls not in instances:
-            instances[cls] = cls()
-        return instances[cls]
+    try:
+        # Checking in the specified directory
+        for entry in os.ilistdir(directory):
+            if entry[0] == filename:
+                return True
+        return False
+    except OSError:
+        # OSError implies the directory doesn't exist, so the file/dir doesn't exist
+        return False
 
-    return getinstance
+
+def ensure_dir_exists(directory):
+    # Split the directory path to check each part and create if necessary
+    parts = directory.split('/')
+    path = ''
+    for part in parts:
+        if part:  # Ignore empty parts to handle leading '/'
+            path += '/' + part if path else part
+            if not exists(path):
+                try:
+                    os.mkdir(path)
+                except OSError as e:
+                    print(f"Failed to create directory {path}: {e}")
+
+
+def load_json_from_file(filepath):
+    try:
+        f = open(filepath, 'r')
+        data = json.loads(f.read())
+        f.close()
+        return data
+
+    except (OSError, KeyError, ValueError, FileNotFoundError):
+        print('Could not read from file: ' + filepath)
+        return {}
+
+
+def write_json_to_file(filepath, data):
+    try:
+        directory, _ = filepath.rsplit('/', 1)
+        ensure_dir_exists(directory)
+
+        with open(filepath, 'w') as f:
+            json.dump(data, f)
+
+        return True
+    except OSError as e:
+        print(f"Could not write to file: {filepath}. Error: {e}")
+        return False
 
 
 @singleton
 class Config(object):
 
     def __init__(self):
+        object.__setattr__(self, 'data', {})
+
+        if not exists(CONFIG_PATH) or not load_json_from_file(CONFIG_PATH):
+            print("No configs file found. Creating from default configs file...")
+            write_json_to_file(CONFIG_PATH, load_json_from_file(CONFIG_DEFAULT_PATH))
+
+        if exists(CONFIG_PATH):
+            object.__setattr__(self, 'data', load_json_from_file(CONFIG_PATH))
+
+        if exists(WIFI_PATH):
+            self.data['wifi'] = load_json_from_file(WIFI_PATH)
+
+    def __getattr__(self, item):
+        try:
+            return self.data[item]
+        except KeyError:
+            raise AttributeError(f"{self.__class__.__name__} has no attribute '{item}'")
+
+    def __setattr__(self, key, value):
+        if key == 'data':
+            object.__setattr__(self, key, value)
+        else:
+            self.data[key] = value
+
+    def __delattr__(self, item):
+        if item in self.data:
+            del self.data[item]
+        else:
+            object.__delattr__(self, item)
+
+    def __getitem__(self, key):
+        return self.data.get(key)
+
+    def __setitem__(self, key, value):
+        self.data[key] = value
+
+    def save(self):
+        data = self.data.copy()
+        wifi = data.pop('wifi', None)
+
+        write_json_to_file(CONFIG_PATH, data)
+        if wifi is not None:
+            write_json_to_file(WIFI_PATH, wifi)
+
+
+@singleton
+class TokenStore(object):
+    def __init__(self):
         self.data = {}
-        self.defaults = {
-            'general': {
-                'description': 'Macap M2D',
-                'config_version': CONFIG_VERSION,
-                'enable_webrepl': True,
-                'autosave_timeout': 600,  # in seconds
-            },
-            'network': {
-                'enabled': True,
-                'ssid': '',
-                'password': '',
-                'hostname': 'coffegrinder',
-                'enable_restapi': True,
-                'host': '0.0.0.0',
-                'port': 80,
-            },
-            'grinder': {
-                'single': 4000,
-                'double': 8000,
-                'memorize_timeout': 5000,
-            },
-            'stats': {
-                'duration': 0,
-                'single': 0,
-                'double': 0,
-            }
-        }
 
-        if not self.read():
-            print("No config file found. Creating...")
-            self.write(self.defaults)
+        if exists(TOKENS_PATH):
+            self.data = load_json_from_file(TOKENS_PATH)
 
-    def read(self, apply=True):
+    def __getattr__(self, item):
         try:
-            print("Reading config from file...")
-            f = open('config.json', 'r')
-            data = json.loads(f.read())
-            f.close()
+            return self.data[item]
+        except KeyError:
+            raise AttributeError(f"{self.__class__.__name__} has no attribute '{item}'")
 
-            if not self.defaults['general']['config_version'] == data['general']['config_version']:
-                print('Config file versions do not match!')
-                print('Backing up old config and creating a new one...')
-                os.rename('config.json', 'config.json.old')
-                self.write(self.defaults)
+    def __setattr__(self, key, value):
+        if key == 'data':
+            object.__setattr__(self, key, value)
+        else:
+            self.data[key] = value
 
-            if apply:
-                self.data = data
+    def __delattr__(self, item):
+        if item in self.data:
+            del self.data[item]
+        else:
+            object.__delattr__(self, item)
 
-        except OSError:
-            print("Could not read config file! Setting default values...")
-            self.data = self.defaults
-            print('Creating a new config file with default values...')
-            self.write(compare=False)
-            return self.defaults
+    def __getitem__(self, key):
+        return self.data.get(key)
 
-        except (KeyError, ValueError):
-            print('Key or Value not found. Config-file seems corrupted!')
-            print('Backing up old config and creating a new one...')
-            os.rename('config.json', 'config.json.old')
-            return self.write(self.defaults)
+    def __setitem__(self, key, value):
+        self.data[key] = value
 
-        return data
+    def create_token(self, client_id):
+        token = hashlib.sha256(client_id + generate_random_string())
+        self.data[client_id] = binascii.hexlify(token.digest())
+        return token
 
-    def write(self, data=None, compare=True):
-        data = data or self.data
-
-        if compare is True:
-            if self.read() == data:
-                print("Config did not change, skipping...")
-                return self.data
-        try:
-            print("Writing config to file...")
-            f = open('config.json', 'w')
-            f.write(json.dumps(data))
-            f.close()
-            print('Saved config...')
-        except OSError:
-            print('Could not write config to file!')
-
-        self.data = data
-        return self.data
-
-    def reset_stats(self):
-        print('Resetting statistics...')
-        self.data['stats'] = self.defaults['stats']
+    def save(self):
+        data = self.data
+        write_json_to_file(TOKENS_PATH, data)
 
 
 conf = Config()
+tokenstore = TokenStore()

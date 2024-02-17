@@ -1,21 +1,21 @@
-import uasyncio
-from config import conf, pinGRN, pinSMO
-from led import LEDController
+import asyncio
+from config import conf, pinGRN, pinSMO, pinLED
+from lib.led import LED
 
 
 async def grind(duration):
-    led_controller = LEDController()
+    led = LED(pinLED)
     try:
         print("Grinding started...")
         pinGRN.on()
-        led_controller.on()
-        await uasyncio.sleep_ms(duration)
-    except uasyncio.CancelledError:
+        led.on()
+        await asyncio.sleep(duration / 1000)
+    except asyncio.CancelledError:
         print("Grinding cancelled...")
-        led_controller.blink(250, conf.data['grinder']['memorize_timeout'])
+        led.blink(250, conf.data['grinder']['memorize_timeout'])
     finally:
         pinGRN.off()
-        led_controller.off()
+        led.off()
         print("Grinding completed or stopped.")
 
 
@@ -34,7 +34,7 @@ class GrinderController:
 
     def start_grinding(self):
         self.cancel_grinding_task()
-        self.__task = uasyncio.create_task(grind(self.__duration))
+        self.__task = asyncio.create_task(grind(self.__duration))
 
     def stop_grinding(self):
         self.cancel_grinding_task()

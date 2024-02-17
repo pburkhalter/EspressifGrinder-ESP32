@@ -1,8 +1,11 @@
-# (c) 2014-2019 Paul Sokolovsky. MIT license.
+# Author: Paul Sokolovsky
+# Copyright Paul Sokolovsky released under the MIT license
+
 from . import compiled
 
 
 class Compiler:
+
     START_CHAR = "{"
     STMNT = "%"
     STMNT_END = "%}"
@@ -108,6 +111,7 @@ class Compiler:
             self.literal(l[:start])
             self.close_literal()
             sel = l[start + 1]
+            #print("*%s=%s=" % (sel, EXPR))
             if sel == self.STMNT:
                 end = l.find(self.STMNT_END)
                 assert end > 0
@@ -118,6 +122,7 @@ class Compiler:
                 if not self.in_literal and l == "\n":
                     break
             elif sel == self.EXPR:
+    #            print("EXPR")
                 end = l.find(self.EXPR_END)
                 assert end > 0
                 expr = l[start + len(self.START_CHAR + self.EXPR):end].strip()

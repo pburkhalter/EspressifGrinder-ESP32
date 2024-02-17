@@ -1,4 +1,6 @@
-# (c) 2014-2020 Paul Sokolovsky. MIT license.
+# Author: Paul Sokolovsky
+# Copyright Paul Sokolovsky released under the MIT license
+
 try:
     from uos import stat, remove
 except:

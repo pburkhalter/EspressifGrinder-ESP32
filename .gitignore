@@ -30,3 +30,6 @@ venv.bak/
 
 # DS Store files (macos)
 ._DS_Store
+
+# Certificates for webserver
+/secrets/certs/

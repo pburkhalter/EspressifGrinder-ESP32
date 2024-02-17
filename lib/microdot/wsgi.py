@@ -1,11 +1,9 @@
 import asyncio
 import os
 import signal
-from microdot import *  # noqa: F401, F403
-from microdot.microdot import Microdot as BaseMicrodot, Request, NoCaseDict, \
-    MUTED_SOCKET_ERRORS
-from microdot.websocket import WebSocket, websocket_upgrade, \
-    with_websocket  # noqa: F401
+from .microdot import *  # noqa: F401, F403
+from .microdot import Microdot as BaseMicrodot, Request, NoCaseDict, MUTED_SOCKET_ERRORS
+from .websocket import WebSocket, websocket_upgrade, with_websocket  # noqa: F401
 
 
 class Microdot(BaseMicrodot):

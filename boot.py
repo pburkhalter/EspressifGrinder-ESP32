@@ -1,99 +1,92 @@
-import network
 import esp
 import gc
 import time
-import ubinascii
-from config import conf
-from led import LEDController
+import network
+
+from config import conf, pinLED
+
+from lib.led import LED
+from lib.device import DeviceInfo
+from lib.net import NetworkManager
 
 
 # Disable debugging
 esp.osdebug(None)
 
-sta_if = network.WLAN(network.STA_IF)
+device = DeviceInfo()
+netman = NetworkManager()
 
 
 def setup():
-    print('-' * 80)
-    print('B O O T')
-    print('-' * 80)
+    if not conf['general']['initialized']:
+        print('Machine not initialized. Creating access point "CoffeGrinder"...')
+        ap = network.WLAN(network.AP_IF)
+        ap.active(True)
 
-    if conf.data['network']['enabled'] is True:
+        ap.config(essid='CoffeeGrinder', password='C0ff3Gr1nd3r', channel=6, authmode=network.AUTH_WPA_WPA2_PSK)
+
+    elif conf['network']['enabled']:
         print('Connecting to network...')
-        
-        if not sta_if.isconnected():
-            sta_if.active(True)
-            sta_if.config(pm=sta_if.PM_NONE)  # disable power management
 
-            sta_if.connect(
-                conf.data['network']['ssid'],
-                conf.data['network']['password']
-            )
-            sta_if.ifconfig('dhcp')
-            while not sta_if.isconnected():
-                time.sleep(1.0)
+        netman.set_powerstate('off')
+        netman.connect(
+            conf.data['wifi']['ssid'],
+            conf.data['wifi']['password']
+        )
 
-        if conf.data['network']['hostname']:
-            print("Setting hostname to: " + conf.data['network']['hostname'])
-            sta_if.config(dhcp_hostname=conf.data['network']['hostname'])
+        netman.hostname = conf.data['network']['hostname']
+        netman.use_dhcp()
 
-        if conf.data['general']['enable_webrepl'] is True:
-            print('Starting WebREPL...')
-            import webrepl
-            webrepl.start()
+        while not netman.isconnected():
+            time.sleep(1.0)
 
-    led_controller = LEDController()
-    led_controller.blink(100, 1000)
+        led_controller = LED(pinLED)
+        led_controller.blink(200, 1000)
 
 
 def welcome():
-    time.sleep(2)
     print('-' * 80)
     print('W E L C O M E')
     print('-' * 80)
-    print('General:')
-    print('Version:', conf.data['general']['config_version'])
+    print('\n')
+    print('About:')
+    print('- Version:\t', conf['general']['version'])
+    print('- Manufacturer:\t', conf['machine']['manufacturer'])
+    print('- Model:\t', conf['machine']['model'])
+    print('- Serial:\t', conf['machine']['serial'])
+    print('\n')
+    print('Device:')
+    print('- Machine:\t', device.machine)
+    print('- Model:\t', device.model)
+    print('- Version:\t', device.version)
+    print('- Node:\t\t', device.node)
+    print('- CPU Hz:\t', device.cpu_freq)
+    print('- Memory:\t', device.mem_total)
 
-    if conf.data['general']['enable_webrepl'] is True:
-        print('WebREPL: Enabled')
-    else:
-        print('WebREPL: Disabled')
+    print('\n')
+    if netman.isconnected:
+        print('Network:')
+        print('- SSID:\t',netman.ssid)
+        print('- RSSI:\t', netman.rssi)
+        print('- Hostname:\t', netman.hostname)
+        print('- IP Address:\t', netman.ipaddr)
+        print('- Netmask:\t', netman.netmask)
+        print('- Gateway:\t', netman.gateway)
+        print('- DNS:\t', netman.dns)
+        print('- MAC:\t', netman.mac)
 
-    if conf.data['general']['autosave_timeout'] > 0:
-        print('Autosave: %ss' % (conf.data['general']['autosave_timeout'],))
-    else:
-        print('Autosave: Disabled')
+        if conf['api']['enable']:
+            print('- REST-API:\t Enabled')
+            print('- Host:\t', conf['api']['host'])
+            print('- Port:\t', conf['api']['port'])
+        else:
+            print('- REST-API:\t Disabled')
 
-    network_config = sta_if.ifconfig()
-    print(' ')
-    print('Network:')
-    print('SSID:', sta_if.config('ssid'))
-    print('Hostname:', network.hostname)
-    print('IP:', network_config[0])
-    print('Subnet:', network_config[1])
-    print('Gateway:', network_config[2])
-    print('DNS:', network_config[3])
-    print('MAC:', ubinascii.hexlify(network.WLAN().config('mac'),':').decode())
-
-    if conf.data['network']['enable_restapi'] is True:
-        print('REST-API: Enabled')
-        print('Host:', conf.data['network']['host'])
-        print('Port:', conf.data['network']['port'])
-    else:
-        print('REST-API: Disabled')
-
-    print(' ')
+    print('\n')
     print("Grinder:")
-    print("Single Grind Duration: %s" % (conf.data['grinder']['single'],))
-    print("Double Grind Duration: %s" % (conf.data['grinder']['double'],))
-    print("Memorize last Grind: %s" % (conf.data['grinder']['memorize_timeout'],))
-
-    print(" ")
-    print('Stats:')
-    print("Single Grinds done: %s" % (conf.data['stats']['single'],))
-    print("Double Grinds done: %s" % (conf.data['stats']['double'],))
-    print("Total grinding Time: %s" % (conf.data['stats']['duration'],))
-    print('-' * 80)
+    print("- Single Grind Duration: %s" % (conf['grinder']['duration_single'],))
+    print("- Double Grind Duration: %s" % (conf['grinder']['duration_double'],))
+    print("- Memorize last Grind for: %s" % (conf['grinder']['memorize_timeout'],))
 
 
 setup()

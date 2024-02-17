@@ -1,0 +1,27 @@
+{
+  "machine": {
+    "manufacturer": "Macap",
+    "model":  "M2D",
+    "serial": "xxxxxxxxxx"
+  },
+  "general": {
+    "version": "0.3.7",
+    "enable_webrepl": false,
+    "initialized": false
+  },
+  "network": {
+    "enable": true,
+    "hostname": "coffegrinder"
+  },
+  "api": {
+    "enable": true,
+    "register_timeout": 300000,
+    "host": "0.0.0.0",
+    "port": 443
+  },
+  "grinder": {
+    "duration_single": 0,
+    "duration_double": 0,
+    "memorize_timeout": 0
+  }
+}

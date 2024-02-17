@@ -1,4 +1,5 @@
 # Author: Kevin Köck
+# Copyright Kevin Köck 2019-2020 Released under the MIT license
 # Stripped down version of Peter Hinch's aswitch.py
 # Created on 2019-10-19 
 
