@@ -51,7 +51,8 @@ def register_routes(app):
 def register_init_routes(app):
     routes = [
         ('/api/init/status',   init_routes.get_init_status,       ['GET']),
-        ('/api/init/reset',    init_routes.get_reset,             ['GET']),
+        ('/api/init/reset',    init_routes.get_reset_setup,       ['GET']),
+        ('/api/init/device',   init_routes.get_device_info,       ['GET']),
         ('/api/init/finish',   init_routes.get_finish,            ['GET']),
         ('/api/init/register', init_routes.post_register_device,  ['POST']),
         ('/api/init/wifi',     init_routes.post_wifi_credentials, ['POST']),

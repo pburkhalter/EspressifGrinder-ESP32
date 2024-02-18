@@ -19,13 +19,28 @@ netman = NetworkManager()
 
 def setup():
     if not conf['general']['initialized']:
+        from lib.microdnssrv import MicroDNSSrv
+
         print('Machine not initialized. Creating access point "CoffeGrinder"...')
         ap = network.WLAN(network.AP_IF)
         ap.active(True)
 
-        ap.config(essid='CoffeeGrinder', password='C0ff3Gr1nd3r', channel=6, authmode=network.AUTH_WPA_WPA2_PSK)
+        ap.config(
+            essid='CoffeeGrinder',
+            password='C0ff3Gr1nd3r',
+            channel=6,
+            authmode=network.AUTH_WPA2_PSK
+        )
 
-    elif conf['network']['enabled']:
+        network.hostname('coffeegrinder')
+
+        if MicroDNSSrv.Create({"coffeegrinder.dev": "192.168.4.1",
+                               "*" :                "192.168.0.254"}):
+            print("MicroDNSSrv started.")
+        else:
+            print("Error to starts MicroDNSSrv...")
+
+    elif conf['network']['enable']:
         print('Connecting to network...')
 
         netman.set_powerstate('off')
@@ -37,7 +52,7 @@ def setup():
         netman.hostname = conf.data['network']['hostname']
         netman.use_dhcp()
 
-        while not netman.isconnected():
+        while not netman.isconnected:
             time.sleep(1.0)
 
         led_controller = LED(pinLED)
@@ -48,13 +63,12 @@ def welcome():
     print('-' * 80)
     print('W E L C O M E')
     print('-' * 80)
-    print('\n')
+    print('')
     print('About:')
     print('- Version:\t', conf['general']['version'])
     print('- Manufacturer:\t', conf['machine']['manufacturer'])
     print('- Model:\t', conf['machine']['model'])
     print('- Serial:\t', conf['machine']['serial'])
-    print('\n')
     print('Device:')
     print('- Machine:\t', device.machine)
     print('- Model:\t', device.model)
@@ -62,8 +76,8 @@ def welcome():
     print('- Node:\t\t', device.node)
     print('- CPU Hz:\t', device.cpu_freq)
     print('- Memory:\t', device.mem_total)
+    print('')
 
-    print('\n')
     if netman.isconnected:
         print('Network:')
         print('- SSID:\t',netman.ssid)
@@ -82,11 +96,12 @@ def welcome():
         else:
             print('- REST-API:\t Disabled')
 
-    print('\n')
-    print("Grinder:")
-    print("- Single Grind Duration: %s" % (conf['grinder']['duration_single'],))
-    print("- Double Grind Duration: %s" % (conf['grinder']['duration_double'],))
-    print("- Memorize last Grind for: %s" % (conf['grinder']['memorize_timeout'],))
+    if conf['general']['initialized']:
+        print('')
+        print("Grinder:")
+        print("- Single Grind Duration: %s" % (conf['grinder']['duration_single'],))
+        print("- Double Grind Duration: %s" % (conf['grinder']['duration_double'],))
+        print("- Memorize last Grind for: %s" % (conf['grinder']['memorize_timeout'],))
 
 
 setup()
