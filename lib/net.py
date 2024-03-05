@@ -1,46 +1,85 @@
+import time
 import network
 import ubinascii
-
-
-iface = network.WLAN(network.STA_IF)
 
 
 class NetworkManager:
 
     def __init__(self):
-        iface.active(True)
+        self.iface = None
+        self.setmode()
 
-    @staticmethod
-    def connect(ssid, password):
-        iface.connect(ssid, password)
+    def setmode(self, mode='client'):
+        if mode == 'ap':
+            self.iface = network.WLAN(network.AP_IF)
+        if mode == 'client':
+            self.iface = network.WLAN(network.STA_IF)
 
-    @staticmethod
-    def use_dhcp():
-        iface.ifconfig('dhcp')
+    def connect(self, ssid, password):
+        self.iface = network.WLAN(network.STA_IF)
+        self.iface.active(True)
+        self.iface.connect(ssid, password)
+
+    def create_ap(self, ssid, password, channel=6, authmode=network.AUTH_WPA2_PSK):
+        self.iface = network.WLAN(network.AP_IF)
+        self.iface.active(True)
+
+        self.iface.config(
+            essid=ssid,
+            password=password,
+            channel=channel,
+            authmode=authmode
+        )
+
+    def use_dhcp(self):
+        self.iface.ifconfig('dhcp')
+
+    def wait_until_wifi_ready(self, timeout=30):
+        start_time = time.time()
+
+        while not self.isconnected:
+            if time.time() - start_time > timeout:
+                print("Connection timeout")
+                return False
+
+            status = self.iface.status()
+
+            if status == network.STAT_NO_AP_FOUND:
+                print("No AP found")
+                return False
+
+            if status == network.STAT_WRONG_PASSWORD:
+                print("Wrong password for AP specified")
+                return False
+
+            time.sleep(1.0)
+
+        # Successfully connected
+        return True
 
     @property
     def powerstate(self):
-        return iface.config('pm')
+        return network.config('pm')
 
     def set_powerstate(self, mode):
         if mode == 'performance':
-            iface.config(pm=iface.PM_PERFORMANCE)
+            self.iface.config(pm=network.WLAN.PM_PERFORMANCE)
         elif mode == 'off':
-            iface.config(pm=iface.PM_NONE)
+            self.iface.config(pm=network.WLAN.PM_NONE)
         elif mode == 'powersave':
-            iface.config(pm=iface.PM_POWERSAVE)  # disable power management
+            self.iface.config(pm=network.WLAN.PM_POWERSAVE)
 
     @property
     def isconnected(self):
-        return iface.isconnected()
+        return self.iface.isconnected()
 
     @property
     def ssid(self):
-        return iface.config('ssid')
+        return self.iface.config('ssid')
 
     @property
     def rssi(self):
-        return ' '.join([str(iface.status('rssi')), 'dB'])
+        return ' '.join([str(self.iface.status('rssi')), 'dB'])
 
     @property
     def hostname(self):
@@ -52,20 +91,21 @@ class NetworkManager:
 
     @property
     def ipaddr(self):
-        return iface.ifconfig()[0]
+        return self.iface.ifconfig()[0]
 
     @property
     def netmask(self):
-        return iface.ifconfig()[1]
+        return self.iface.ifconfig()[1]
 
     @property
     def gateway(self):
-        return iface.ifconfig()[2]
+        return self.iface.ifconfig()[2]
 
     @property
     def dns(self):
-        return iface.ifconfig()[3]
+        return self.iface.ifconfig()[3]
 
     @property
     def mac(self):
         return ubinascii.hexlify(network.WLAN().config('mac'), ':').decode()
+

@@ -11,7 +11,9 @@
   },
   "network": {
     "enable": true,
-    "hostname": "coffegrinder"
+    "hostname": "coffeegrinder",
+    "default_ssid": "CoffeeGrinder",
+    "default_password": "C0ff33Gr1nd3r"
   },
   "api": {
     "enable": true,
@@ -20,8 +22,10 @@
     "port": 443
   },
   "grinder": {
-    "duration_single": 0,
-    "duration_double": 0,
-    "memorize_timeout": 0
+    "duration": {
+      "single": 0,
+      "double": 0,
+      "memorize": 0
+    }
   }
 }
