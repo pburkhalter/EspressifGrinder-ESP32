@@ -19,7 +19,10 @@ class LED:
 
     async def _blink(self, interval, duration):
         if duration:
-            await asyncio.wait_for(blink_led(self.pin, interval), duration)
+            try:
+                await asyncio.wait_for(blink_led(self.pin, interval), duration)
+            except asyncio.TimeoutError:
+                pass
         else:
             await blink_led(self.pin, interval)
 

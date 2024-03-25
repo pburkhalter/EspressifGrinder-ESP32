@@ -18,6 +18,7 @@ class NetworkManager:
     def connect(self, ssid, password):
         self.iface = network.WLAN(network.STA_IF)
         self.iface.active(True)
+        print("Connecting to network '{}'...".format(ssid))
         self.iface.connect(ssid, password)
 
     def create_ap(self, ssid, password, channel=6, authmode=network.AUTH_WPA2_PSK):
@@ -44,15 +45,14 @@ class NetworkManager:
 
             status = self.iface.status()
 
+            # Handle specific statuses with messages but do not return
             if status == network.STAT_NO_AP_FOUND:
-                print("No AP found")
+                print("No AP found, retrying...")
+            elif status == network.STAT_WRONG_PASSWORD:
+                print("Wrong password for AP specified!")
                 return False
 
-            if status == network.STAT_WRONG_PASSWORD:
-                print("Wrong password for AP specified")
-                return False
-
-            time.sleep(1.0)
+            time.sleep(1.0)  # Wait a bit before trying again
 
         # Successfully connected
         return True

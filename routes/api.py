@@ -24,6 +24,12 @@ def get_status(request):
 def get_factory_reset(request):
     conf['general']['initialized'] = False
     conf.save()
+
+    async def delayed_reset():
+        await asyncio.sleep(2)
+        machine.reset()
+
+    asyncio.create_task(delayed_reset())
     return Response('OK', status_code=200)
 
 
